@@ -3,4 +3,4 @@ all:
 debug:
 	@dlv debug .
 proto:
-	protoc --go-grpc_out=./pb ./protocol/*.proto
+	protoc --go-grpc_out=./pb --go_out=./pb ./protocol/*.proto

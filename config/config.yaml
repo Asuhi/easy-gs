@@ -1,0 +1,5 @@
+nsq:
+  address:"127.0.0.1:4150"
+  lookupaddr: "127.0.0.1:4160"
+  topic:
+    
