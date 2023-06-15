@@ -13,6 +13,7 @@ require (
 require (
 	github.com/HdrHistogram/hdrhistogram-go v1.1.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/jmoiron/sqlx v1.3.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/stretchr/testify v1.7.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect

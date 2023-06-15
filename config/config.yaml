@@ -1,5 +1,17 @@
 nsq:
   address:"127.0.0.1:4150"
   lookupaddr: "127.0.0.1:4160"
-  topic:
-    
+
+services:
+  # - service:
+  #     name: "login"
+  #     address:"0.0.0.0:10001"
+  #     redis: "127.0.0.1:6379"
+  #     database: "root:password@tcp(127.0.0.1:3306)/account"
+  - service:
+      name: "chat"
+      address:"0.0.0.0:10002"
+      redis: "127.0.0.1:6379"
+  - service:
+      name: "hello"
+      address:"0.0.0.0:10003"
