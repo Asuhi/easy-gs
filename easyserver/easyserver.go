@@ -2,8 +2,10 @@ package easyserver
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net"
+	"os"
 	"path"
 
 	"github.com/jmoiron/sqlx"
@@ -57,8 +59,15 @@ func (es *EasyServer) BuildServer(server IServer) *EasyServer {
 	if err := viper.ReadInConfig(); err != nil {
 		log.Fatalln(err)
 	}
+
+	f, err := os.Open(GServerFlags.ConfigPath)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer f.Close()
 	opts := Options{}
-	if err := viper.Unmarshal(&opts); err != nil {
+	decoder := json.NewDecoder(f)
+	if err := decoder.Decode(&opts); err != nil {
 		log.Fatalln(err)
 	}
 
@@ -87,18 +96,12 @@ func (es *EasyServer) BuildServer(server IServer) *EasyServer {
 	return es
 }
 
-func (es *EasyServer) GrpcServe(opt *ServiceOpt) grpc.ServiceRegistrar {
+func (es *EasyServer) GrpcServe(opt *ServiceOpt) (*grpc.Server, net.Listener) {
 	lis, err := net.Listen("tcp", opt.ListenPort)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	s := grpc.NewServer()
-
-	log.Printf("%s service listening at %v", opt.Name, lis.Addr())
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
-	}
-	return s
+	return grpc.NewServer(), lis
 }
 
 func (es *EasyServer) Serve() {
@@ -106,9 +109,15 @@ func (es *EasyServer) Serve() {
 	for _, role := range GServerFlags.Roles {
 		if s, ok := es.Servers[role]; ok {
 			go func(ctx context.Context, s *Server) {
+
 				cancelCtx, f := context.WithCancel(ctx)
 				s.Server.BeforeRun(s.Opt)
-				s.Server.Run(cancelCtx, s.Opt, es.GrpcServe(s.Opt))
+				g, lis := es.GrpcServe(s.Opt)
+				s.Server.Run(cancelCtx, s.Opt, g)
+				log.Printf("%s service listening at %v", s.Opt.Name, lis.Addr())
+				if err := g.Serve(lis); err != nil {
+					log.Fatalf("failed to serve: %v", err)
+				}
 				f()
 				cancelCtx.Done()
 			}(ctx, s)

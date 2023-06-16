@@ -1,0 +1,13 @@
+syntax = "proto3";
+option go_package = "github.com/akiuw/echo";
+package echo;
+// The greeting service definition.
+service EchoServer {
+    // Sends a greeting
+    rpc Echo (Echodata) returns (Echodata) {}
+}
+
+// The request message containing the user's name.
+message Echodata {
+    string data = 1;
+}

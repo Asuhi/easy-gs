@@ -7,12 +7,11 @@
   "services":[
     {
       "name":"hello",
-      "listen_port":":10003"
+      "listen_port":":10002"
     },
     {
-      "name": "chat",
-      "listen_port":":10002",
-      "redis": "127.0.0.1:6379"
+      "name": "echo",
+      "listen_port":":10003"
     }
   ]
 }
