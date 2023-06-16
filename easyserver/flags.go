@@ -17,7 +17,7 @@ func init() {
 
 	var roles string
 	flag.StringVar(&roles, "roles", "hello", "started with service role")
-	flag.StringVar(&GServerFlags.ConfigPath, "config", "./config/config.yaml", "config path")
+	flag.StringVar(&GServerFlags.ConfigPath, "config", "./config/config.json", "config path")
 	flag.Parse()
 	GServerFlags.Roles = strings.Split(roles, ";")
 }

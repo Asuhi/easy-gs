@@ -8,10 +8,6 @@ import (
 func main() {
 
 	es := &gs.EasyServer{}
-
-	opt := &gs.ServerOpt{
-		ServiceName: "hello",
-	}
-	es = es.BuildServer(opt, hello.HelloServer)
+	es = es.BuildServer(&hello.HelloServer{})
 	es.Serve()
 }

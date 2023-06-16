@@ -2,12 +2,11 @@ package helloserver
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"net"
 
 	"google.golang.org/grpc"
 
+	es "easy-gs/easyserver"
 	pb "easy-gs/pb/github.com/akiuw/hello"
 )
 
@@ -22,15 +21,10 @@ func (hs *HelloServer) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.H
 	return &pb.HelloReply{Message: "Hello " + in.GetName()}, nil
 }
 
-func (hs *HelloServer) Run() {
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", 50051))
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
-	s := grpc.NewServer()
+func (hs *HelloServer) BeforeRun(_ *es.ServiceOpt) {
+
+}
+
+func (hs *HelloServer) Run(ctx context.Context, opt *es.ServiceOpt, s grpc.ServiceRegistrar) {
 	pb.RegisterHelloServerServer(s, &HelloServer{})
-	log.Printf("server listening at %v", lis.Addr())
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
-	}
 }
