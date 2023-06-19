@@ -22,6 +22,6 @@ func (es *EchoServer) Echo(ctx context.Context, in *pb.Echodata) (*pb.Echodata, 
 func (es *EchoServer) BeforeRun(_ *es.ServiceOpt) {
 }
 
-func (es *EchoServer) Run(ctx context.Context, opt *es.ServiceOpt, s grpc.ServiceRegistrar) {
+func (es *EchoServer) Run(opt *es.ServiceOpt, s grpc.ServiceRegistrar) {
 	pb.RegisterEchoServerServer(s, &EchoServer{})
 }

@@ -25,6 +25,6 @@ func (hs *HelloServer) BeforeRun(_ *es.ServiceOpt) {
 
 }
 
-func (hs *HelloServer) Run(ctx context.Context, opt *es.ServiceOpt, s grpc.ServiceRegistrar) {
+func (hs *HelloServer) Run(opt *es.ServiceOpt, s grpc.ServiceRegistrar) {
 	pb.RegisterHelloServerServer(s, &HelloServer{})
 }

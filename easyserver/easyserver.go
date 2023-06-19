@@ -25,7 +25,7 @@ import (
 // notifyserver: tcp ---- client
 type IServer interface {
 	BeforeRun(*ServiceOpt)
-	Run(context.Context, *ServiceOpt, grpc.ServiceRegistrar)
+	Run(*ServiceOpt, grpc.ServiceRegistrar)
 	// Config()
 	// Tracer()
 }
@@ -45,55 +45,74 @@ type Server struct {
 
 type EasyServer struct {
 	Servers map[string]*Server // k:servicename
-	// rpc service instance
-	// http server instance
-	// messagequeue
+	Flags   IServerFlags       // roles and config path
 }
 
-func (es *EasyServer) BuildServer(server IServer) *EasyServer {
+var Opts *Options
 
-	viper.SetConfigName(path.Base(GServerFlags.ConfigPath)) // name of config file (without extension)
-	viper.SetConfigType("json")                             // REQUIRED if the config file does not have the extension in the name
-	viper.AddConfigPath(path.Dir(GServerFlags.ConfigPath))  // path to look for the config file in
+func (es *EasyServer) LoadFlagConfig() {
+
+	viper.SetConfigName(path.Base(es.Flags.GetPath())) // name of config file (without extension)
+	viper.SetConfigType(es.Flags.GetConfigType())      // REQUIRED if the config file does not have the extension in the name
+	viper.AddConfigPath(path.Dir(es.Flags.GetPath()))  // path to look for the config file in
 
 	if err := viper.ReadInConfig(); err != nil {
 		log.Fatalln(err)
 	}
 
-	f, err := os.Open(GServerFlags.ConfigPath)
+	f, err := os.Open(es.Flags.GetPath())
 	if err != nil {
 		log.Fatalln(err)
 	}
 	defer f.Close()
-	opts := Options{}
+	Opts = &Options{}
 	decoder := json.NewDecoder(f)
-	if err := decoder.Decode(&opts); err != nil {
+
+	if err := decoder.Decode(Opts); err != nil {
 		log.Fatalln(err)
 	}
+}
 
+func (es *EasyServer) FindOption(name string) *ServiceOpt {
+	for _, opt := range Opts.Services {
+		if opt.Name == name {
+			return opt
+		}
+	}
+	return nil
+}
+
+func (es *EasyServer) BuildServer(name string, server IServer) *EasyServer {
+
+	opt := es.FindOption(name)
+	if opt == nil {
+		log.Fatalf("cant find service:%s /n", name)
+	}
+
+	var db *sqlx.DB
+	if opt.Database != "" {
+		db = NewDB(opt.Database, opt.PoolConns)
+	}
 	if len(es.Servers) == 0 {
 		es.Servers = make(map[string]*Server)
 	}
-	for _, v := range opts.Services {
-		var db *sqlx.DB
-		if v.Database != "" {
-			db, err := sqlx.Open("mysql", v.Database)
-			if err != nil {
-				log.Fatalln(err)
-			}
-			db.SetMaxOpenConns(v.PoolConns)
-			db.SetMaxIdleConns(v.PoolConns)
-		}
 
-		es.Servers[v.Name] = &Server{
-			Opt:    v,
-			Server: server,
-			Viper:  viper.GetViper(),
-			DB:     db,
-		}
+	es.Servers[opt.Name] = &Server{
+		Opt:    opt,
+		Server: server,
+		Viper:  viper.GetViper(),
+		DB:     db,
 	}
 
 	return es
+}
+
+// globle interceptor for all service's rpc request
+func (es *EasyServer) GlobleInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo,
+	handler grpc.UnaryHandler) (interface{}, error) {
+
+	resp, err := handler(ctx, req)
+	return resp, err
 }
 
 func (es *EasyServer) GrpcServe(opt *ServiceOpt) (*grpc.Server, net.Listener) {
@@ -101,27 +120,42 @@ func (es *EasyServer) GrpcServe(opt *ServiceOpt) (*grpc.Server, net.Listener) {
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	return grpc.NewServer(), lis
+
+	var gopts []grpc.ServerOption
+	gopts = append(gopts, grpc.UnaryInterceptor(es.GlobleInterceptor))
+	s := grpc.NewServer(gopts...)
+
+	return s, lis
+}
+
+func (es *EasyServer) Run(s *Server) {
+
+	s.Server.BeforeRun(s.Opt)
+	g, lis := es.GrpcServe(s.Opt)
+
+	s.Server.Run(s.Opt, g)
+	log.Printf("%s service listening at %v", s.Opt.Name, lis.Addr())
+	if err := g.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
 }
 
 func (es *EasyServer) Serve() {
 	ctx := context.Background()
-	for _, role := range GServerFlags.Roles {
-		if s, ok := es.Servers[role]; ok {
-			go func(ctx context.Context, s *Server) {
-
-				cancelCtx, f := context.WithCancel(ctx)
-				s.Server.BeforeRun(s.Opt)
-				g, lis := es.GrpcServe(s.Opt)
-				s.Server.Run(cancelCtx, s.Opt, g)
-				log.Printf("%s service listening at %v", s.Opt.Name, lis.Addr())
-				if err := g.Serve(lis); err != nil {
-					log.Fatalf("failed to serve: %v", err)
-				}
-				f()
-				cancelCtx.Done()
-			}(ctx, s)
+	roles := es.Flags.GetRoles()
+	if roles[0] == "all" {
+		for _, v := range es.Servers {
+			go es.Run(v)
+		}
+	} else {
+		for _, role := range roles {
+			if s, ok := es.Servers[role]; ok {
+				go es.Run(s)
+			} else {
+				log.Printf("%s not exist", role)
+			}
 		}
 	}
+
 	<-ctx.Done()
 }
