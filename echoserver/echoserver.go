@@ -5,23 +5,23 @@ import (
 
 	"google.golang.org/grpc"
 
-	es "easy-gs/easyserver"
-	pb "easy-gs/pb/github.com/akiuw/echo"
+	echo "akiuw.golang.com/easy-gs/pb/echo"
+	esv "akiuw.golang.com/easyserver"
 )
 
 // server is used to implement helloworld.GreeterServer.
 type EchoServer struct {
-	pb.UnimplementedEchoServerServer
+	echo.UnimplementedEchoServerServer
 }
 
 // SayHello implements helloworld.GreeterServer
-func (es *EchoServer) Echo(ctx context.Context, in *pb.Echodata) (*pb.Echodata, error) {
-	return &pb.Echodata{Data: in.Data}, nil
+func (es *EchoServer) Echo(ctx context.Context, in *echo.Echodata) (*echo.Echodata, error) {
+	return &echo.Echodata{Data: in.Data}, nil
 }
 
-func (es *EchoServer) BeforeRun(_ *es.ServiceOpt) {
+func (es *EchoServer) BeforeRun(_ *esv.ServiceOpt) {
 }
 
-func (es *EchoServer) Run(opt *es.ServiceOpt, s grpc.ServiceRegistrar) {
-	pb.RegisterEchoServerServer(s, &EchoServer{})
+func (es *EchoServer) Run(opt *esv.ServiceOpt, s grpc.ServiceRegistrar) {
+	echo.RegisterEchoServerServer(s, &EchoServer{})
 }

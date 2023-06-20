@@ -1,7 +1,5 @@
 package main
 
-var GServerFlags *ServerFlags
-
 type ServerFlags struct {
 	Roles      []string
 	ConfigPath string

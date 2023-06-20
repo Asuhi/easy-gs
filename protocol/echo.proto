@@ -1,5 +1,5 @@
 syntax = "proto3";
-option go_package = "github.com/akiuw/echo";
+option go_package = "./echo";
 package echo;
 // The greeting service definition.
 service EchoServer {
